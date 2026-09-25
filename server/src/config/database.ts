@@ -96,12 +96,20 @@ export function getSequelize(): Sequelize {
         sequelizeInstance.close();
       } catch {}
     }
-    const config = parseDatabaseUrl(currentDbUrl);
-    sequelizeInstance = new Sequelize(config.database, config.user, config.password, {
-      host: config.host,
-      port: config.port,
-      dialect: 'mysql',
-      logging: false,
+ const config = parseDatabaseUrl(currentDbUrl);
+
+sequelizeInstance = new Sequelize(config.database, config.user, config.password, {
+  host: config.host,
+  port: config.port,
+  dialect: 'mysql',
+
+  dialectOptions: {
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  },
+
+  logging: false,
       pool: {
         max: 10,
         min: 0,
