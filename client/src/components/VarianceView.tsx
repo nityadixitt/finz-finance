@@ -55,19 +55,8 @@ export const VarianceView: React.FC<VarianceViewProps> = ({
   const [driversLoading, setDriversLoading] = useState(false);
   const [expandedVendor, setExpandedVendor] = useState<string | null>(null);
 
-  // Load variance report when months change
-  useEffect(() => {
+  const loadReport = React.useCallback(async () => {
     if (!baseMonth || !comparisonMonth) return;
-    loadReport();
-  }, [baseMonth, comparisonMonth]);
-
-  // Load category drivers when category or months change
-  useEffect(() => {
-    if (!baseMonth || !comparisonMonth || !selectedCategory) return;
-    loadDrivers();
-  }, [baseMonth, comparisonMonth, selectedCategory]);
-
-  const loadReport = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -78,9 +67,10 @@ export const VarianceView: React.FC<VarianceViewProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [baseMonth, comparisonMonth]);
 
-  const loadDrivers = async () => {
+  const loadDrivers = React.useCallback(async () => {
+    if (!baseMonth || !comparisonMonth || !selectedCategory) return;
     setDriversLoading(true);
     try {
       const data = await fetchCategoryDrivers(selectedCategory, baseMonth, comparisonMonth);
@@ -94,7 +84,17 @@ export const VarianceView: React.FC<VarianceViewProps> = ({
     } finally {
       setDriversLoading(false);
     }
-  };
+  }, [baseMonth, comparisonMonth, selectedCategory]);
+
+  // Load variance report when months change
+  useEffect(() => {
+    loadReport();
+  }, [loadReport]);
+
+  // Load category drivers when category or months change
+  useEffect(() => {
+    loadDrivers();
+  }, [loadDrivers]);
 
   return (
     <div className="space-y-6 pb-12">

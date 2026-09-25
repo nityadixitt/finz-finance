@@ -8,8 +8,6 @@ import {
   User as UserIcon,
   CheckCircle2,
   AlertTriangle,
-  Briefcase,
-  Layers,
 } from 'lucide-react';
 import { registerUser, loginUser } from '../services/api';
 import { User, UserRole } from '../types';

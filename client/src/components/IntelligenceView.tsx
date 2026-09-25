@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   TrendingUp,
   AlertTriangle,
@@ -6,13 +6,9 @@ import {
   Printer,
   Building2,
   Copy,
-  Calculator,
-  ArrowRight,
-  ShieldCheck,
-  CheckCircle2,
-  Layers,
-  HelpCircle,
   FileSpreadsheet,
+  Calculator,
+  Layers,
 } from 'lucide-react';
 import { IntelligenceCenterData, Transaction } from '../types';
 import { fetchIntelligenceCenter } from '../services/api';
@@ -42,11 +38,7 @@ export const IntelligenceView: React.FC<IntelligenceViewProps> = ({
   // Filter for Risk Signals
   const [selectedSeverity, setSelectedSeverity] = useState<'ALL' | 'HIGH' | 'MEDIUM'>('ALL');
 
-  useEffect(() => {
-    loadIntelligence();
-  }, [isDemo]);
-
-  const loadIntelligence = async () => {
+  const loadIntelligence = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -57,7 +49,11 @@ export const IntelligenceView: React.FC<IntelligenceViewProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [isDemo]);
+
+  useEffect(() => {
+    loadIntelligence();
+  }, [loadIntelligence]);
 
   if (loading && !data) {
     return (

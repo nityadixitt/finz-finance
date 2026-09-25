@@ -18,10 +18,10 @@ function sanitizeFinancialMarkdown(raw: string): string {
   let text = raw.replace(/\r\n/g, '\n');
 
   // Replace accidental divider sequences like •\n-- or •\n--- with a clean markdown hr
-  text = text.replace(/(?:^|\n)\s*[•\-\*]\s*\n+--+\s*(?:\n|$)/g, '\n\n---\n\n');
+  text = text.replace(/(?:^|\n)\s*[•\-*]\s*\n+--+\s*(?:\n|$)/g, '\n\n---\n\n');
 
   // Normalize LaTeX inline escaped dollar math like: $\$6,200 + ...\$ -> $6,200 + ...$
-  text = text.replace(/\\\$([^\$]+)\\\$/g, '$$$1$$');
+  text = text.replace(/\\\$([^$]+)\\\$/g, '$$$1$$');
 
   // Collapse broken parenthesis citations:
   // e.g., "increase (\n[TXN_1179]\n)" -> "increase ([TXN_1179])"
@@ -30,7 +30,7 @@ function sanitizeFinancialMarkdown(raw: string): string {
 
   // Collapse citations separated by comma or hyphen across lines:
   // e.g. [TXN_1123]\n,\n[TXN_1129]
-  text = text.replace(/(\[?TXN[_-][A-Za-z0-9_-]+\]?)\s*\n+\s*([,–\-])\s*\n+\s*(\[?TXN[_-][A-Za-z0-9_-]+\]?)/gi, '$1$2 $3');
+  text = text.replace(/(\[?TXN[_-][A-Za-z0-9_-]+\]?)\s*\n+\s*([,–-])\s*\n+\s*(\[?TXN[_-][A-Za-z0-9_-]+\]?)/gi, '$1$2 $3');
   text = text.replace(/(\[?TXN[_-][A-Za-z0-9_-]+\]?)\s*\n+\s*,/gi, '$1,');
   text = text.replace(/,\s*\n+\s*(\[?TXN[_-][A-Za-z0-9_-]+\]?)/gi, ', $1');
 
@@ -107,7 +107,7 @@ export const FinancialMarkdown: React.FC<FinancialMarkdownProps> = ({
     }
 
     // 1. Dividers (--- or ***)
-    if (/^(\-{3,}|\*{3,})$/.test(trimmed)) {
+    if (/^(-{3,}|\*{3,})$/.test(trimmed)) {
       blocks.push({ type: 'divider' });
       i++;
       continue;
@@ -218,11 +218,11 @@ export const FinancialMarkdown: React.FC<FinancialMarkdownProps> = ({
     }
 
     // 6. Bullet Lists (*, -, •)
-    if (/^[•\-\*]\s+/.test(trimmed)) {
+    if (/^[•\-*]\s+/.test(trimmed)) {
       const items: string[] = [];
       while (i < rawLines.length) {
         const cur = rawLines[i].trim();
-        const m = cur.match(/^[•\-\*]\s+(.+)$/);
+        const m = cur.match(/^[•\-*]\s+(.+)$/);
         if (m) {
           items.push(m[1].trim());
           i++;
@@ -248,7 +248,7 @@ export const FinancialMarkdown: React.FC<FinancialMarkdownProps> = ({
       !rawLines[i].trim().startsWith('$$') &&
       !rawLines[i].trim().startsWith('---') &&
       !/^\d+\.\s+/.test(rawLines[i].trim()) &&
-      !/^[•\-\*]\s+/.test(rawLines[i].trim())
+      !/^[•\-*]\s+/.test(rawLines[i].trim())
     ) {
       paraLines.push(rawLines[i].trim());
       i++;
@@ -266,7 +266,7 @@ export const FinancialMarkdown: React.FC<FinancialMarkdownProps> = ({
   const renderInline = (rawText: string) => {
     // Regex matches citations, bold segments, math segments, code segments
     // Tokens: [TXN_...], **bold**, *italic*, $math$, `code`
-    const tokenRegex = /(\[?TXN[_-][A-Za-z0-9_-]+\]?|\*\*[^*]+\*\*|\*(?!\*)[^*]+\*|\$[^\$]+\$|`[^`]+`)/g;
+    const tokenRegex = /(\[?TXN[_-][A-Za-z0-9_-]+\]?|\*\*[^*]+\*\*|\*(?!\*)[^*]+\*|\$[^$]+\$|`[^`]+`)/g;
     const parts = rawText.split(tokenRegex);
 
     return parts.map((part, pIdx) => {
@@ -317,7 +317,7 @@ export const FinancialMarkdown: React.FC<FinancialMarkdownProps> = ({
       // 3. Inline Math $...$
       if (part.startsWith('$') && part.endsWith('$') && part.length >= 2 && !part.includes(' ')) {
         // Plain currency dollar sign like $5,000, don't treat as LaTeX if single number
-        if (/^\$[\d,\.]+(\s*(?:M|K|k|m))?$/.test(part)) {
+        if (/^\$[\d,.]+(\s*(?:M|K|k|m))?$/.test(part)) {
           return <span key={pIdx} className="font-mono font-semibold text-emerald-300">{part}</span>;
         }
       }

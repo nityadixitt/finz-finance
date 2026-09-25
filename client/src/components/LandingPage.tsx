@@ -1,24 +1,16 @@
 import React, { useState } from 'react';
 import {
   ShieldCheck,
-  TrendingUp,
   AlertTriangle,
   ArrowRight,
   Database,
   CheckCircle2,
-  FileSpreadsheet,
   GitCompare,
   Download,
-  Layers,
   Calculator,
   MessageSquare,
-  Lock,
-  Zap,
   Check,
-  ExternalLink,
   ChevronRight,
-  BarChart3,
-  RefreshCw,
 } from 'lucide-react';
 import { getSampleCsvDownloadUrl } from '../services/api';
 

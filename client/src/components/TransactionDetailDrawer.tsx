@@ -2,15 +2,10 @@ import React, { useState, useEffect } from 'react';
 import {
   X,
   FileSpreadsheet,
-  AlertTriangle,
   History,
   Save,
   CheckCircle,
-  Building2,
-  Calendar,
-  CreditCard,
   Layers,
-  ArrowRight,
 } from 'lucide-react';
 import { Transaction, FinancialCategory } from '../types';
 import { formatCurrency } from '../utils/formatters';
@@ -31,13 +26,23 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
   onClose,
   onUpdateCategory,
 }) => {
-  if (!transaction) return null;
-
-  const [selectedCategory, setSelectedCategory] = useState<FinancialCategory>(transaction.category);
+  const [selectedCategory, setSelectedCategory] = useState<FinancialCategory>(
+    transaction?.category || 'OPERATING_EXPENSE'
+  );
   const [reason, setReason] = useState('');
-  const [includedInPnl, setIncludedInPnl] = useState(transaction.included_in_pnl);
+  const [includedInPnl, setIncludedInPnl] = useState(transaction?.included_in_pnl ?? true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Sync state whenever selected transaction changes
+  useEffect(() => {
+    if (transaction) {
+      setSelectedCategory(transaction.category);
+      setIncludedInPnl(transaction.included_in_pnl);
+      setReason('');
+      setSaveSuccess(false);
+    }
+  }, [transaction]);
 
   const categories: FinancialCategory[] = [
     'REVENUE',
@@ -49,6 +54,7 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
 
   // Close modal on Escape key
   useEffect(() => {
+    if (!transaction) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
@@ -56,7 +62,9 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [onClose, transaction]);
+
+  if (!transaction) return null;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();

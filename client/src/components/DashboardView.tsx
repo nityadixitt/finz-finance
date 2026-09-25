@@ -7,8 +7,6 @@ import {
   PieChart,
   BarChart3,
   GitCompare,
-  FileSpreadsheet,
-  CheckCircle2,
   ArrowRight,
   Cpu,
   Layers,
@@ -96,9 +94,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     : 0;
   const profitMoM = latestMonth && prevMonth && prevMonth.operatingProfit !== 0
     ? ((latestMonth.operatingProfit - prevMonth.operatingProfit) / Math.abs(prevMonth.operatingProfit)) * 100
-    : 0;
-  const cogsMoM = latestMonth && prevMonth && prevMonth.cogs > 0
-    ? ((latestMonth.cogs - prevMonth.cogs) / prevMonth.cogs) * 100
     : 0;
 
   const pendingReviews = reviewItems.filter((r) => r.status === 'PENDING');

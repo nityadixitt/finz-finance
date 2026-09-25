@@ -4,7 +4,6 @@ import {
   CheckCircle,
   Check,
   X,
-  ArrowRight,
   ShieldCheck,
 } from 'lucide-react';
 import { ReviewItem, FinancialCategory, Transaction } from '../types';
@@ -113,7 +112,7 @@ export const ReviewView: React.FC<ReviewViewProps> = ({
     setCategoryOverrides((prev) => ({ ...prev, [itemId]: cat }));
   };
 
-  const handleAcceptSuggested = async (item: ReviewItem) => {
+  const _handleAcceptSuggested = async (item: ReviewItem) => {
     setResolvingId(item.id);
     try {
       // Confirm the suggested category

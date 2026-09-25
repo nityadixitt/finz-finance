@@ -3,24 +3,6 @@ import {
   Printer,
   X,
   FileSpreadsheet,
-  CheckCircle2,
-  AlertTriangle,
-  Building2,
-  TrendingUp,
-  Layers,
-  ArrowRight,
-  Calculator,
-  Calendar,
-  ExternalLink,
-  Receipt,
-  FileText,
-  Scale,
-  BookOpen,
-  DollarSign,
-  AlertCircle,
-  HelpCircle,
-  Clock,
-  Briefcase,
   ShieldCheck,
   Cpu,
 } from 'lucide-react';
@@ -61,9 +43,6 @@ export const FinancialReviewReportModal: React.FC<FinancialReviewReportModalProp
   const basePayroll = health.payroll - pnl.payroll.delta;
   const baseOpex = health.operatingExpenses - pnl.opex.delta;
   const baseOperatingProfit = health.operatingProfit - pnl.operatingProfit.delta;
-
-  const baseGrossMarginPct = baseRevenue > 0 ? (baseGrossProfit / baseRevenue) * 100 : 0;
-  const baseOperatingMarginPct = baseRevenue > 0 ? (baseOperatingProfit / baseRevenue) * 100 : 0;
 
   // Illustrative adjusted scenario metrics
   const simulatedGrossProfit = health.grossProfit + impact.totalPotentialGrossProfitAdjustment;

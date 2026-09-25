@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ActiveTab, AppView } from './config/routes';
 import { Navbar, Footer } from './components/layout';
 import { AuthModal, UploadModal } from './components/modals';
@@ -44,62 +44,9 @@ export function App() {
   const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
-  const [loading, setLoading] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
 
-  const handleSelectCitation = async (txnId: string) => {
-    if (!txnId) return;
-    const cleanId = txnId.replace(/^\[?TXN[_-]/i, '').replace(/\]?$/, '').trim();
-
-    // Check if transaction is already in loaded state (exact or clean match)
-    const found = transactions.find(
-      (t) =>
-        t.id === txnId ||
-        t.id === cleanId ||
-        t.id === `TXN_${cleanId}` ||
-        t.id.toLowerCase() === txnId.toLowerCase() ||
-        t.id.toLowerCase() === cleanId.toLowerCase()
-    );
-    if (found) {
-      setSelectedTransaction(found);
-      return;
-    }
-
-    // Fetch directly from server
-    try {
-      const fetched = await fetchTransactionById(txnId);
-      if (fetched) {
-        setSelectedTransaction(fetched);
-        return;
-      }
-    } catch (err) {
-      // Fallback: try with stripped ID
-      try {
-        if (cleanId && cleanId !== txnId) {
-          const fetchedStripped = await fetchTransactionById(cleanId);
-          if (fetchedStripped) {
-            setSelectedTransaction(fetchedStripped);
-            return;
-          }
-        }
-      } catch (err2) {
-        console.warn('Could not locate cited transaction:', txnId, err);
-      }
-    }
-  };
-
-  // Initial load check - strictly load data only if active session exists
-  useEffect(() => {
-    if (getStoredUser() || isDemoUser) {
-      refreshAllData();
-    } else {
-      setTransactions([]);
-      setPnLData(null);
-      setReviewItems([]);
-    }
-  }, []);
-
-  const refreshAllData = async (forceDemo?: boolean) => {
+  const refreshAllData = useCallback(async (forceDemo?: boolean) => {
     const demoMode = typeof forceDemo === 'boolean' ? forceDemo : isDemoUser;
     
     // Strict client-side data isolation: Do not query backend if logged out and not in demo
@@ -107,11 +54,9 @@ export function App() {
       setTransactions([]);
       setPnLData(null);
       setReviewItems([]);
-      setLoading(false);
       return;
     }
 
-    setLoading(true);
     setDbError(null);
     try {
       const [txnsRes, pnlRes, reviewsRes] = await Promise.allSettled([
@@ -151,10 +96,56 @@ export function App() {
       }
     } catch (err: any) {
       setDbError(err.message || 'Failed to connect to backend.');
-    } finally {
-      setLoading(false);
+    }
+  }, [currentUser, isDemoUser]);
+
+  const handleSelectCitation = async (txnId: string) => {
+    if (!txnId) return;
+    const cleanId = txnId.replace(/^\[?TXN[_-]/i, '').replace(/\]?$/, '').trim();
+
+    // Check if transaction is already in loaded state (exact or clean match)
+    const found = transactions.find(
+      (t) =>
+        t.id === txnId ||
+        t.id === cleanId ||
+        t.id === `TXN_${cleanId}` ||
+        t.id.toLowerCase() === txnId.toLowerCase() ||
+        t.id.toLowerCase() === cleanId.toLowerCase()
+    );
+    if (found) {
+      setSelectedTransaction(found);
+      return;
+    }
+
+    // Fetch directly from server
+    try {
+      const fetched = await fetchTransactionById(txnId);
+      if (fetched) {
+        setSelectedTransaction(fetched);
+        return;
+      }
+    } catch (err) {
+      // Fallback: try with stripped ID
+      try {
+        if (cleanId && cleanId !== txnId) {
+          const fetchedStripped = await fetchTransactionById(cleanId);
+          if (fetchedStripped) {
+            setSelectedTransaction(fetchedStripped);
+            return;
+          }
+        }
+      } catch (_err2) {
+        console.warn('Could not locate cited transaction:', txnId, err);
+      }
     }
   };
+
+  // Initial load check - strictly load data only if active session exists
+  useEffect(() => {
+    if (getStoredUser() || isDemoUser) {
+      refreshAllData();
+    }
+  }, [refreshAllData, isDemoUser]);
 
   const handleAuthSuccess = async (user: User) => {
     setCurrentUser(user);
