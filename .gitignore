@@ -1,0 +1,69 @@
+# ─── Environment Variables & Secrets (CRITICAL) ─────────────────
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.env
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+*.local
+
+# ─── Dependencies ──────────────────────────────────────────────
+node_modules/
+**/node_modules/
+
+# ─── Build & Bundler Outputs ───────────────────────────────────
+dist/
+**/dist/
+build/
+**/build/
+dist-ssr/
+.vite/
+**/.vite/
+.turbo/
+.parcel-cache/
+
+# ─── Logs & Diagnostics ────────────────────────────────────────
+logs/
+**/logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─── Database & Local Storage ──────────────────────────────────
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+uploads/
+**/uploads/
+
+# ─── Testing & Coverage ────────────────────────────────────────
+coverage/
+**/coverage/
+.nyc_output/
+
+# ─── Temporary & Scratch Files ─────────────────────────────────
+tmp/
+temp/
+scratch/
+*.tmp
+IMPLEMENTATION_PLAN.md
+
+# ─── OS & IDE Configuration ───────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
