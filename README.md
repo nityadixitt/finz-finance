@@ -66,22 +66,3 @@ finz-finance/
 │   │   └── services/        # P&L math, variance math, AI agent tools, CSV parser
 └── README.md
 ```
-
----
-
-## Deployment Configuration
-
-### Frontend (e.g. Vercel / Netlify)
-- **Build command:** `npm run build --prefix client`
-- **Output directory:** `client/dist`
-- **Environment variables:**
-  - `VITE_API_BASE_URL`: Deployed backend API URL (e.g. `https://finz-finance-api.onrender.com/api`)
-
-### Backend (e.g. Render / Railway)
-- **Build command:** `npm run build --prefix server`
-- **Start command:** `npm start --prefix server`
-- **Environment variables:**
-  - `PORT`: `5000`
-  - `DATABASE_URL`: `mysql://<user>:<password>@<host>:3306/<database>`
-  - `GEMINI_API_KEY`: Google Gemini API key
-  - `AI_MODEL`: `gemini-3.8-flash`
