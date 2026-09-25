@@ -2,8 +2,7 @@
 
 > Technical assessment submission by **Nitya Dixit**.
 
-🔗 **Live Application:** [https://finz-finance.vercel.app](https://finz-finance.vercel.app) *(replace with your deployed URL)*  
-🔗 **API Health:** [https://finz-finance-api.onrender.com/api](https://finz-finance-api.onrender.com/api)
+🔗 **Live Application:** [[https://finz-finance-client.onrender.com/](https://finz-finance-client.onrender.com/)] *(replace with your deployed URL)*  
 
 ---
 
