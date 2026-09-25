@@ -177,18 +177,25 @@ async function parseOpenAiClassificationResponse(res: Response): Promise<AiClass
  * Returns null if no LLM is configured or on unrecoverable error.
  * The caller (ingestionService) should fall back to the deterministic rule engine on null.
  */
+let quotaExceededUntil = 0;
+
 export async function classifyTransactionBatchWithAi(
   transactions: TransactionInput[]
 ): Promise<AiClassificationResult[] | null> {
   const config = getAiConfig();
   if (!config.provider || !config.key) return null;
 
+  // Circuit breaker: skip network calls if we recently hit rate limits / quota exhaustion
+  if (Date.now() < quotaExceededUntil) {
+    return null;
+  }
+
   const prompt = CLASSIFICATION_PROMPT(transactions);
 
   try {
     if (config.provider === 'gemini') {
       const candidateModels = Array.from(
-        new Set([config.model, 'gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'])
+        new Set([config.model, 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'].filter(Boolean))
       );
 
       for (const model of candidateModels) {
@@ -202,10 +209,24 @@ export async function classifyTransactionBatchWithAi(
               generationConfig: { responseMimeType: 'application/json', temperature: 0.1 },
             }),
           });
+
+          // Quota / Rate limit error: stop trying other models on this key and start cooldown
+          if (res.status === 429) {
+            console.warn('[ClassificationService] Gemini API quota/rate limit exceeded (429). Triggering 60s fallback to deterministic engine.');
+            quotaExceededUntil = Date.now() + 60_000;
+            return null;
+          }
+
+          if (res.status === 401 || res.status === 403) {
+            console.warn('[ClassificationService] Gemini API authentication error (401/403). Triggering fallback to deterministic engine.');
+            quotaExceededUntil = Date.now() + 300_000;
+            return null;
+          }
+
           if (res.status === 404) {
-            console.warn(`[ClassificationService] Model ${model} returned 404, trying fallback...`);
             continue;
           }
+
           const result = await parseGeminiClassificationResponse(res as any);
           if (result) return result;
         } catch (mErr: any) {

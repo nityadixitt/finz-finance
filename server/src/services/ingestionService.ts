@@ -446,17 +446,21 @@ export async function ingestCsvContent(
     for (let b = 0; b < aiCandidates.length; b += 40) {
       const batch = aiCandidates.slice(b, b + 40);
       const aiResults = await classifyTransactionBatchWithAi(batch);
-      if (aiResults && Array.isArray(aiResults)) {
-        for (const aiItem of aiResults) {
-          const match = parsedTransactions.find((t) => t.id === aiItem.transactionId);
-          if (match && aiItem.category) {
-            match.category = aiItem.category;
-            match.confidence = aiItem.confidence || match.confidence;
-            match.included_in_pnl = aiItem.pnlTreatment === 'INCLUDED_IN_PNL';
-            if (aiItem.isReviewRequired) {
-              match.is_review_required = true;
-              match.review_reason = aiItem.reviewReason || aiItem.reasoning || match.review_reason;
-            }
+      if (!aiResults || !Array.isArray(aiResults)) {
+        // If AI is unavailable (quota exceeded, rate limited, offline),
+        // abort remaining batches immediately and rely on deterministic rules.
+        console.warn('[Ingestion] AI batch unavailable or rate-limited. Proceeding with deterministic classification for remaining rows.');
+        break;
+      }
+      for (const aiItem of aiResults) {
+        const match = parsedTransactions.find((t) => t.id === aiItem.transactionId);
+        if (match && aiItem.category) {
+          match.category = aiItem.category;
+          match.confidence = aiItem.confidence || match.confidence;
+          match.included_in_pnl = aiItem.pnlTreatment === 'INCLUDED_IN_PNL';
+          if (aiItem.isReviewRequired) {
+            match.is_review_required = true;
+            match.review_reason = aiItem.reviewReason || aiItem.reasoning || match.review_reason;
           }
         }
       }
