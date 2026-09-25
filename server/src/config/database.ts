@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
 
 dotenv.config();
-
+//comment
 let sequelizeInstance: Sequelize | null = null;
 let lastDbUrl: string | null = null;
 let isDbConnected = false;
