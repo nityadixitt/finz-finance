@@ -469,7 +469,13 @@ export async function ingestCsvContent(
     console.warn('[Ingestion] AI Classification skipped/fallback used:', aiErr.message);
   }
 
-  // Upsert transactions into SQLite/MySQL
+  // Reset existing records for this user/workspace so only the newly uploaded CSV is active
+  if (userId) {
+    await ReviewItem.destroy({ where: { user_id: userId } });
+    await Transaction.destroy({ where: { user_id: userId } });
+  }
+
+  // Insert transactions into SQLite/MySQL
   let insertedCount = 0;
   let reviewedCount = 0;
   const createdTxns: Transaction[] = [];
