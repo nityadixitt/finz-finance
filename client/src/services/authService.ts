@@ -34,11 +34,13 @@ export async function registerUser(payload: {
   companyName: string;
   role?: UserRole;
   industry?: string;
-}): Promise<{ user: any; message: string }> {
-  return await apiFetch<{ user: any; message: string }>('/auth/register', {
+}): Promise<{ user: any; message?: string }> {
+  const data = await apiFetch<any>('/auth/register', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+  const user = data?.user || data;
+  return { user, message: data?.message };
 }
 
 export async function loginUser(payload: {

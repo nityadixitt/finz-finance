@@ -17,7 +17,7 @@ export async function handleRegister(req: Request, res: Response, next: NextFunc
     res.status(201).json({
       success: true,
       message: 'Account successfully registered! Please sign in with your credentials.',
-      data: user,
+      data: { user, ...user },
     });
   } catch (error) {
     next(error);

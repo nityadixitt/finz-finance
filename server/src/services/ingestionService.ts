@@ -1,6 +1,7 @@
 import { parse } from 'csv-parse/sync';
 import { Transaction, FinancialCategory } from '../models/Transaction.js';
 import { ReviewItem } from '../models/ReviewItem.js';
+import { getSequelize } from '../config/database.js';
 
 export interface RawCsvRow {
   [key: string]: string;
@@ -469,43 +470,54 @@ export async function ingestCsvContent(
     console.warn('[Ingestion] AI Classification skipped/fallback used:', aiErr.message);
   }
 
-  // Reset existing records for this user/workspace so only the newly uploaded CSV is active
-  if (userId) {
-    await ReviewItem.destroy({ where: { user_id: userId } });
-    await Transaction.destroy({ where: { user_id: userId } });
-  }
+  // Atomic transaction: Reset existing records and bulk insert new records
+  const sequelize = getSequelize();
+  let createdTxns: Transaction[] = [];
+  const reviewItemsToCreate = parsedTransactions
+    .filter((t) => t.is_review_required)
+    .map((txnData) => ({
+      transaction_id: txnData.id,
+      user_id: userId,
+      flag_type: (txnData.confidence < 0.5 ? 'LOW_CONFIDENCE' : 'AMBIGUOUS_TRANSFER') as any,
+      status: 'PENDING' as any,
+      suggested_category: txnData.category,
+      confidence: txnData.confidence,
+      notes: txnData.review_reason,
+    }));
 
-  // Insert transactions into SQLite/MySQL
-  let insertedCount = 0;
-  let reviewedCount = 0;
-  const createdTxns: Transaction[] = [];
+  await sequelize.transaction(async (t) => {
+    if (userId) {
+      await ReviewItem.destroy({ where: { user_id: userId }, transaction: t });
+      await Transaction.destroy({ where: { user_id: userId }, transaction: t });
+    }
 
-  for (const txnData of parsedTransactions) {
-    const [txn, created] = await Transaction.upsert(txnData);
-    createdTxns.push(txn);
-    if (created) insertedCount++;
+    createdTxns = await Transaction.bulkCreate(parsedTransactions as any[], {
+      transaction: t,
+      updateOnDuplicate: [
+        'date',
+        'description',
+        'counterparty',
+        'amount',
+        'method',
+        'category',
+        'confidence',
+        'is_review_required',
+        'review_reason',
+        'included_in_pnl',
+      ],
+    });
 
-    // If review is required, create or update a ReviewItem entry
-    if (txnData.is_review_required) {
-      reviewedCount++;
-      await ReviewItem.findOrCreate({
-        where: { transaction_id: txnData.id },
-        defaults: {
-          transaction_id: txnData.id,
-          user_id: userId,
-          flag_type: txnData.confidence < 0.5 ? 'LOW_CONFIDENCE' : 'AMBIGUOUS_TRANSFER',
-          status: 'PENDING',
-          suggested_category: txnData.category,
-          confidence: txnData.confidence,
-          notes: txnData.review_reason,
-        },
+    if (reviewItemsToCreate.length > 0) {
+      await ReviewItem.bulkCreate(reviewItemsToCreate as any[], {
+        transaction: t,
+        ignoreDuplicates: true,
       });
     }
-  }
+  });
 
   return {
     insertedCount: parsedTransactions.length,
-    reviewedCount,
+    reviewedCount: reviewItemsToCreate.length,
     transactions: createdTxns,
   };
 }

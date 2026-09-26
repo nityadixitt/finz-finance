@@ -75,9 +75,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         industry,
       });
 
+      // Safely extract registered user's name
+      const registeredName = res?.user?.fullName || (res as any)?.fullName || fullName || 'your account';
+
       // Show success message and transition to Sign In mode
       setSignupSuccessMessage(
-        `Account created successfully for ${res.user.fullName}! Please sign in below with your credentials to access your financial ledger.`
+        `Account created successfully for ${registeredName}! Please sign in below with your credentials to access your financial ledger.`
       );
       setLoginEmail(signupEmail);
       setLoginPassword('');

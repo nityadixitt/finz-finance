@@ -202,9 +202,9 @@ export async function classifyTransactionBatchWithAi(
         try {
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.key}`;
           
-          // Strict 6-second timeout so Google never hangs the user's ingestion screen
+          // Strict 3-second timeout so Google never hangs the user's ingestion screen
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 6000);
+          const timeoutId = setTimeout(() => controller.abort(), 3000);
 
           let res: Response;
           try {

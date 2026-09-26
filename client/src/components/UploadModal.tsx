@@ -47,10 +47,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
         inserted: result.insertedCount,
         reviewed: result.reviewedCount,
       });
+      // Real-time immediate refresh
+      onSuccess();
       setTimeout(() => {
-        onSuccess();
         onClose();
-      }, 1200);
+      }, 600);
     } catch (err: any) {
       setError(err.message || 'Failed to ingest CSV.');
     } finally {
@@ -67,10 +68,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
         inserted: result.insertedCount,
         reviewed: result.reviewedCount,
       });
+      // Real-time immediate refresh
+      onSuccess();
       setTimeout(() => {
-        onSuccess();
         onClose();
-      }, 1000);
+      }, 600);
     } catch (err: any) {
       setError(err.message || 'Failed to load demo data.');
     } finally {

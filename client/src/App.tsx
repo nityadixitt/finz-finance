@@ -47,15 +47,8 @@ export function App() {
   const [dbError, setDbError] = useState<string | null>(null);
 
   const refreshAllData = useCallback(async (forceDemo?: boolean) => {
-    const demoMode = typeof forceDemo === 'boolean' ? forceDemo : isDemoUser;
-    
-    // Strict client-side data isolation: Do not query backend if logged out and not in demo
-    if (!currentUser && !demoMode) {
-      setTransactions([]);
-      setPnLData(null);
-      setReviewItems([]);
-      return;
-    }
+    // If not authenticated, automatically use demo/guest tenant so workspace data is never blanked out
+    const demoMode = typeof forceDemo === 'boolean' ? forceDemo : (!currentUser || isDemoUser);
 
     setDbError(null);
     try {
@@ -187,17 +180,42 @@ export function App() {
     reason?: string,
     includedInPnl?: boolean
   ) => {
-    await updateTransactionCategory(id, newCategory, reason, includedInPnl);
-    await refreshAllData();
+    // Real-time optimistic update: immediately update transaction in React state
+    setTransactions((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              category: newCategory,
+              included_in_pnl: typeof includedInPnl === 'boolean' ? includedInPnl : t.included_in_pnl,
+              is_review_required: false,
+            }
+          : t
+      )
+    );
+    setReviewItems((prev) =>
+      prev.map((item) =>
+        item.transaction_id === id ? { ...item, status: 'RESOLVED' as const } : item
+      )
+    );
     if (selectedTransaction && selectedTransaction.id === id) {
-      const updated = transactions.find((t) => t.id === id);
-      if (updated) {
-        setSelectedTransaction({
-          ...updated,
-          category: newCategory,
-          included_in_pnl: typeof includedInPnl === 'boolean' ? includedInPnl : updated.included_in_pnl,
-        });
-      }
+      setSelectedTransaction((prev) =>
+        prev
+          ? {
+              ...prev,
+              category: newCategory,
+              included_in_pnl: typeof includedInPnl === 'boolean' ? includedInPnl : prev.included_in_pnl,
+              is_review_required: false,
+            }
+          : null
+      );
+    }
+    try {
+      await updateTransactionCategory(id, newCategory, reason, includedInPnl);
+      await refreshAllData();
+    } catch (err: any) {
+      await refreshAllData();
+      throw err;
     }
   };
 
@@ -206,8 +224,17 @@ export function App() {
     status: 'RESOLVED' | 'DISMISSED',
     notes?: string
   ) => {
-    await resolveReviewItem(id, status, notes);
-    await refreshAllData();
+    // Real-time optimistic update: immediately resolve item in UI without waiting
+    setReviewItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status, notes: notes || item.notes } : item))
+    );
+    try {
+      await resolveReviewItem(id, status, notes);
+      await refreshAllData();
+    } catch (err: any) {
+      await refreshAllData();
+      throw err;
+    }
   };
 
   const pendingReviewCount = reviewItems.filter((i) => i.status === 'PENDING').length;
@@ -334,7 +361,10 @@ export function App() {
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onSuccess={async () => {
-          await refreshAllData();
+          if (!currentUser) {
+            setIsDemoUser(true);
+          }
+          await refreshAllData(!currentUser ? true : undefined);
           if (currentView === 'landing') {
             setCurrentView('app');
             setActiveTab('transactions');
