@@ -1,4 +1,5 @@
 import { parse } from 'csv-parse/sync';
+import { Op } from 'sequelize';
 import { Transaction, FinancialCategory } from '../models/Transaction.js';
 import { ReviewItem } from '../models/ReviewItem.js';
 import { getSequelize } from '../config/database.js';
@@ -486,14 +487,36 @@ export async function ingestCsvContent(
     }));
 
   await sequelize.transaction(async (t) => {
-    if (userId) {
-      await ReviewItem.destroy({ where: { user_id: userId }, transaction: t });
-      await Transaction.destroy({ where: { user_id: userId }, transaction: t });
-    }
+    const incomingIds = parsedTransactions.map((tx) => tx.id);
 
+    // 1. Delete review items associated with these transactions or belonging to this user
+    await ReviewItem.destroy({
+      where: {
+        [Op.or]: [
+          ...(userId ? [{ user_id: userId }] : []),
+          { transaction_id: incomingIds },
+        ],
+      },
+      transaction: t,
+    });
+
+    // 2. Delete existing transactions matching incoming IDs or belonging to this user
+    // This ensures no ID collision and guarantees proper tenant ownership
+    await Transaction.destroy({
+      where: {
+        [Op.or]: [
+          ...(userId ? [{ user_id: userId }] : []),
+          { id: incomingIds },
+        ],
+      },
+      transaction: t,
+    });
+
+    // 3. Bulk insert transactions with user_id in updateOnDuplicate
     createdTxns = await Transaction.bulkCreate(parsedTransactions as any[], {
       transaction: t,
       updateOnDuplicate: [
+        'user_id',
         'date',
         'description',
         'counterparty',
@@ -507,6 +530,7 @@ export async function ingestCsvContent(
       ],
     });
 
+    // 4. Bulk insert review items
     if (reviewItemsToCreate.length > 0) {
       await ReviewItem.bulkCreate(reviewItemsToCreate as any[], {
         transaction: t,

@@ -31,6 +31,7 @@ interface AiAnalystDrawerProps {
   onSelectCitation: (transactionId: string) => void;
   isDemo?: boolean;
   isLoggedIn?: boolean;
+  currentUserId?: string | null;
   transactionsCount?: number;
   onOpenAuth?: (mode: 'signin' | 'signup') => void;
   onEnterDemo?: () => void;
@@ -70,6 +71,7 @@ export const AiAnalystDrawer: React.FC<AiAnalystDrawerProps> = ({
   onSelectCitation,
   isDemo = false,
   isLoggedIn = false,
+  currentUserId = null,
   transactionsCount = 0,
   onOpenAuth,
   onEnterDemo,
@@ -90,6 +92,25 @@ export const AiAnalystDrawer: React.FC<AiAnalystDrawerProps> = ({
     provider: 'gemini' | 'openai' | 'ollama' | null;
     model: string;
   } | null>(null);
+
+  const prevUserIdRef = useRef<string | null | undefined>(currentUserId);
+
+  // Strict tenant isolation: reset chat conversation when switching accounts or logging out
+  useEffect(() => {
+    if (prevUserIdRef.current !== currentUserId) {
+      prevUserIdRef.current = currentUserId;
+      setMessages([
+        {
+          id: 'welcome',
+          role: 'assistant',
+          content: `Hello! I'm **Finz AI**, your grounded Financial Analyst Copilot.\n\nI answer accounting inquiries with **zero math hallucinations** by calling our deterministic SQL financial engine. Every figure is audited, and specific ledger entries can be inspected by clicking citation pills like [TXN_20260304_022].\n\nHow can I help you analyze your financials today?`,
+          timestamp: new Date(),
+        },
+      ]);
+      setError(null);
+      setInputValue('');
+    }
+  }, [currentUserId]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);

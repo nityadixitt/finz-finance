@@ -62,7 +62,13 @@ export function App() {
       let errorDetail = '';
 
       if (txnsRes.status === 'fulfilled') {
-        setTransactions(txnsRes.value.transactions);
+        const val: any = txnsRes.value;
+        const txList = Array.isArray(val)
+          ? val
+          : Array.isArray(val?.transactions)
+          ? val.transactions
+          : [];
+        setTransactions(txList);
       } else {
         hasError = true;
         errorDetail = (txnsRes as PromiseRejectedResult).reason?.message || '';
@@ -365,9 +371,9 @@ export function App() {
             setIsDemoUser(true);
           }
           await refreshAllData(!currentUser ? true : undefined);
+          setActiveTab('transactions');
           if (currentView === 'landing') {
             setCurrentView('app');
-            setActiveTab('transactions');
           }
         }}
       />
@@ -381,6 +387,8 @@ export function App() {
 
       {/* Grounded AI Financial Analyst Drawer */}
       <AiAnalystDrawer
+        key={currentUser ? currentUser.id : (isDemoUser ? 'demo' : 'guest')}
+        currentUserId={currentUser ? currentUser.id : (isDemoUser ? 'demo' : 'guest')}
         isOpen={isAiDrawerOpen}
         onToggle={() => setIsAiDrawerOpen((prev) => !prev)}
         onSelectCitation={handleSelectCitation}
