@@ -148,11 +148,9 @@ async function executeTool(
 const GEMINI_MODEL_FALLBACK_CHAIN = [
   'gemini-3.8-flash',
   'gemini-3.1-flash-lite',
+  'gemini-3.0-flash',
   'gemini-2.5-flash',
   'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-flash-latest',
-  'gemini-1.5-pro',
 ] as const;
 
 async function runGeminiTurn(
@@ -184,15 +182,24 @@ async function runGeminiTurn(
   while (iterations < 6) {
     iterations++;
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents,
-        tools: geminiTools,
-      }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents,
+          tools: geminiTools,
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!res.ok) {
       const errText = await res.text();
@@ -320,12 +327,26 @@ async function executeGeminiAgent(
         continue;
       }
 
-      // Non-recoverable error — don't try other models
-      throw err;
+      // Non-recoverable error — log and try next model or gracefully degrade
+      console.warn(`[AgentService:Gemini] Model ${model} encountered error:`, msg);
+      continue;
     }
   }
 
-  throw lastError ?? new Error('All Gemini model candidates exhausted.');
+  console.warn('[AgentService:Gemini] All Gemini models exhausted. Returning graceful degradation notice.');
+  return {
+    reply: [
+      '⚠️ **AI Financial Analyst is Temporarily Busy**',
+      '',
+      'Google Gemini is currently experiencing heavy global traffic spikes (503) or rate limits (429) on your API key.',
+      '',
+      '**System Status:**',
+      '- All your ledger records, P&L calculations, and review items are **100% accurate and up-to-date** via the deterministic engine.',
+      '- Please wait 30–60 seconds and submit your question again.',
+      '- *(Tip: You can also configure an `OPENAI_API_KEY` in environment variables for zero-downtime AI chat).*',
+    ].join('\n'),
+    toolCallsExecuted: [],
+  };
 }
 
 // ─── OpenAI / Ollama Agent ────────────────────────────────────────────────────

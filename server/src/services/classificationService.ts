@@ -195,30 +195,43 @@ export async function classifyTransactionBatchWithAi(
   try {
     if (config.provider === 'gemini') {
       const candidateModels = Array.from(
-        new Set([config.model, 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'].filter(Boolean))
+        new Set([config.model, 'gemini-3.8-flash', 'gemini-3.1-flash-lite'].filter(Boolean))
       );
 
       for (const model of candidateModels) {
         try {
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.key}`;
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { responseMimeType: 'application/json', temperature: 0.1 },
-            }),
-          });
+          
+          // Strict 6-second timeout so Google never hangs the user's ingestion screen
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-          // Quota / Rate limit error: stop trying other models on this key and start cooldown
-          if (res.status === 429) {
-            console.warn('[ClassificationService] Gemini API quota/rate limit exceeded (429). Triggering 60s fallback to deterministic engine.');
+          let res: Response;
+          try {
+            res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: 'application/json', temperature: 0.1 },
+              }),
+              signal: controller.signal,
+            });
+          } finally {
+            clearTimeout(timeoutId);
+          }
+
+          // Service unavailable (503 / 5xx) or Quota/Rate limit (429):
+          // Trip the 60s circuit breaker and return null immediately.
+          // Ingestion will seamlessly and instantly finish using the deterministic engine.
+          if (res.status === 429 || res.status === 503 || res.status >= 500) {
+            console.warn(`[ClassificationService] Gemini unavailable or rate-limited (${res.status}). Tripping 60s circuit breaker to use instant deterministic engine.`);
             quotaExceededUntil = Date.now() + 60_000;
             return null;
           }
 
           if (res.status === 401 || res.status === 403) {
-            console.warn('[ClassificationService] Gemini API authentication error (401/403). Triggering fallback to deterministic engine.');
+            console.warn('[ClassificationService] Gemini authentication error (401/403). Tripping 5m circuit breaker.');
             quotaExceededUntil = Date.now() + 300_000;
             return null;
           }
@@ -230,6 +243,12 @@ export async function classifyTransactionBatchWithAi(
           const result = await parseGeminiClassificationResponse(res as any);
           if (result) return result;
         } catch (mErr: any) {
+          const isTimeout = mErr.name === 'AbortError' || mErr.message?.includes('aborted');
+          if (isTimeout) {
+            console.warn(`[ClassificationService] Gemini request timed out (>6s). Tripping 60s circuit breaker to preserve upload speed.`);
+            quotaExceededUntil = Date.now() + 60_000;
+            return null;
+          }
           console.warn(`[ClassificationService] Model ${model} failed:`, mErr.message);
         }
       }
